@@ -1,0 +1,25 @@
+using System.Windows;
+using SharpLensAI.Services;
+
+namespace SharpLensAI
+{
+    public partial class SettingsWindow : Window
+    {
+        public SettingsWindow()
+        {
+            InitializeComponent();
+            var settings = SettingsManager.Load();
+            ApiKeyTextBox.Text = settings.CustomApiKey;
+        }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            var settings = SettingsManager.Load();
+            settings.CustomApiKey = ApiKeyTextBox.Text.Trim();
+            SettingsManager.Save(settings);
+
+            MessageBox.Show("Настройки сохранены!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+            Close();
+        }
+    }
+}

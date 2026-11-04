@@ -1,0 +1,47 @@
+<Window x:Class="SharpLensAI.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Настройки SharpLens AI"
+        Width="470" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#FFF7F8FA"
+        FontFamily="Segoe UI">
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Настройки" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,16"/>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,14">
+            <TextBlock Text="Google Gemini API key" FontWeight="SemiBold" Margin="0,0,0,6"/>
+            <PasswordBox x:Name="ApiKeyPasswordBox" Height="34" Padding="8,6"/>
+            <TextBlock Text="Ключ хранится в appsettings.json в профиле пользователя. Пустое поле использует настроенный встроенный ключ, если он задан разработчиком."
+                       TextWrapping="Wrap" Foreground="#FF64748B" FontSize="11" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <CheckBox x:Name="AutoCopyCheckBox" Grid.Row="2"
+                  Content="Автоматически копировать готовый ответ в буфер обмена"
+                  Margin="0,0,0,12"/>
+
+        <StackPanel Grid.Row="3" Margin="0,0,0,16">
+            <CheckBox x:Name="EnableHotkeyCheckBox"
+                      Content="Глобальная горячая клавиша Ctrl + Shift + X"/>
+            <TextBlock Text="Работает, даже когда SharpLens AI находится в фоне. Если сочетание занято другой программой, его регистрация не удастся."
+                       TextWrapping="Wrap" Foreground="#FF64748B" FontSize="11" Margin="22,5,0,0"/>
+        </StackPanel>
+
+        <TextBlock x:Name="StatusText" Grid.Row="4" Foreground="#FFB45309" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Отмена" MinWidth="92" Padding="12,7" Margin="0,0,8,0" IsCancel="True"/>
+            <Button Content="Сохранить" MinWidth="104" Padding="12,7" IsDefault="True" Click="SaveButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

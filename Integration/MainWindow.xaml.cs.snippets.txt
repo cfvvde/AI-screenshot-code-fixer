@@ -1,0 +1,121 @@
+Ниже — интеграционные фрагменты. Сохраните ваш существующий код захвата/OCR; замените имена CaptureButton_Click, AskAiButton, StatusText,
+recognizedText, prompt, ocrLanguage на фактические имена в вашем MainWindow.
+
+--- using ---
+
+using System;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using SharpLensAI.Models;
+using SharpLensAI.Services;
+
+--- поля MainWindow ---
+
+private readonly LlmService _llmService = new();
+private readonly HistoryService _historyService = new();
+private readonly GlobalHotkeyManager _globalHotkeyManager = new();
+
+--- глобальная горячая клавиша ---
+
+protected override void OnSourceInitialized(EventArgs e)
+{
+    base.OnSourceInitialized(e);
+
+    _globalHotkeyManager.HotkeyPressed += (_, _) =>
+        Dispatcher.BeginInvoke(new Action(() =>
+            CaptureButton_Click(this, new RoutedEventArgs())));
+
+    if (SettingsManager.Load().EnableGlobalHotkey &&
+        !_globalHotkeyManager.Register(this, ModifierKeys.Control | ModifierKeys.Shift, Key.X))
+    {
+        Dispatcher.BeginInvoke(new Action(() => MessageBox.Show(this,
+            "Не удалось зарегистрировать Ctrl+Shift+X. Возможно, это сочетание уже занято другой программой.",
+            "Горячая клавиша", MessageBoxButton.OK, MessageBoxImage.Information)));
+    }
+}
+
+Идея: глобальная клавиша вызывает тот же существующий обработчик, что и кнопка «📸 Скрин», поэтому OCR/оверлей не надо дублировать.
+Если в MainWindow уже есть OnSourceInitialized, объедините его тело, не создавая второй override.
+
+--- кнопка настроек ---
+
+private void SettingsButton_Click(object sender, RoutedEventArgs e)
+{
+    var dialog = new SettingsWindow { Owner = this };
+    if (dialog.ShowDialog() != true) return;
+
+    _globalHotkeyManager.Unregister();
+    var settings = SettingsManager.Load();
+    if (settings.EnableGlobalHotkey &&
+        !_globalHotkeyManager.Register(this, ModifierKeys.Control | ModifierKeys.Shift, Key.X))
+    {
+        MessageBox.Show(this, "Не удалось зарегистрировать Ctrl+Shift+X: сочетание может быть занято.",
+            "Горячая клавиша", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+}
+
+--- кнопка истории ---
+
+private void HistoryButton_Click(object sender, RoutedEventArgs e)
+{
+    new HistoryWindow { Owner = this }.ShowDialog();
+}
+
+--- общий метод отправки текста OCR в Gemini ---
+
+// Вызывайте после OCR и выбора промпта, передав распознанный текст, финальный промпт и язык OCR.
+private async Task ProcessRecognizedTextWithAiAsync(string recognizedText, string prompt, string ocrLanguage)
+{
+    if (string.IsNullOrWhiteSpace(recognizedText))
+    {
+        MessageBox.Show(this, "Сначала выделите область экрана с текстом.", "SharpLens AI",
+            MessageBoxButton.OK, MessageBoxImage.Information);
+        return;
+    }
+
+    AskAiButton.IsEnabled = false;
+    LoadingPanel.Visibility = Visibility.Visible;
+    StatusText.Text = "Отправляю запрос…";
+
+    try
+    {
+        var answer = await _llmService.AskGeminiAsync(
+            SettingsManager.GetEffectiveApiKey(), prompt, recognizedText);
+
+        AnswerViewer.Markdown = answer;
+
+        // Сохраняем каждый успешный ответ локально, даже если копирование выключено.
+        await _historyService.AddAsync(new HistoryEntry
+        {
+            CreatedAt = DateTime.Now,
+            Prompt = prompt,
+            RecognizedText = recognizedText,
+            Answer = answer,
+            OcrLanguage = ocrLanguage
+        });
+
+        var settings = SettingsManager.Load();
+        var copied = !settings.AutoCopyAnswer || await ClipboardHelper.SetTextWithRetryAsync(answer);
+        StatusText.Text = settings.AutoCopyAnswer
+            ? (copied ? "Готово — ответ скопирован в буфер обмена." : "Ответ готов, но скопировать его не удалось.")
+            : "Готово.";
+    }
+    catch (Exception ex)
+    {
+        StatusText.Text = "Не удалось получить ответ.";
+        MessageBox.Show(this, ex.Message, "Ошибка Gemini API", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+    finally
+    {
+        LoadingPanel.Visibility = Visibility.Collapsed;
+        AskAiButton.IsEnabled = true;
+    }
+}
+
+После этого в вашем существующем обработчике кнопки «Запросить ИИ» замените старый прямой вызов LlmService на:
+
+await ProcessRecognizedTextWithAiAsync(recognizedText, prompt, ocrLanguage);
+
+Важно: AskAiButton/StatusText — условные имена. Если у вас другие x:Name, замените их. Если обработчик уже управляет состоянием кнопок,
+объедините блоки try/finally, чтобы не дублировать логику.

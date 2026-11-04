@@ -1,0 +1,94 @@
+﻿<Window x:Class="SharpLensAI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SharpLens AI" Height="350" Width="500"
+        WindowStartupLocation="CenterScreen">
+    
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <!-- Область текстов -->
+            <RowDefinition Height="*"/>
+            <!-- Выпадающее поле для своего промпта -->
+            <RowDefinition Height="Auto"/>
+            <!-- Нижняя панель управления -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Основная область: OCR и ИИ -->
+        <Grid Grid.Row="0" Margin="0,0,0,5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Header="Текст (OCR)" Grid.Column="0">
+                <TextBox Name="OcrResultTextBox" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" FontSize="11"/>
+            </GroupBox>
+
+            <GroupBox Header="Результат ИИ" Grid.Column="2">
+                <Grid>
+                    <TextBox Name="AiResultTextBox" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" IsReadOnly="True" FontSize="11"/>
+                    <TextBox Name="AiResponseTextBox" Visibility="Collapsed"/>
+                </Grid>
+            </GroupBox>
+        </Grid>
+
+        <!-- Поле для "Своего промпта" (скрыто по умолчанию) -->
+        <TextBox Grid.Row="1" Name="CustomPromptTextBox" Visibility="Collapsed" Height="26" 
+                 Margin="0,0,0,5" VerticalContentAlignment="Center" Padding="5,0"
+                 Text="Введите ваш запрос к ИИ..."/>
+
+        <!-- Нижняя панель управления -->
+        <StackPanel Grid.Row="2" Orientation="Vertical">
+            <PasswordBox Name="ApiKeyBox" Visibility="Collapsed"/>
+            <TextBox Name="PromptTextBox" Visibility="Collapsed"/>
+
+            <Grid Margin="0,2,0,0">
+                <Grid.ColumnDefinitions>
+                    <!-- Язык -->
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="6"/>
+                    <!-- Скриншот -->
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="6"/>
+                    <!-- Задача ИИ -->
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="6"/>
+                    <!-- Запрос ИИ -->
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="6"/>
+                    <!-- Настройки -->
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Радиокнопки языка -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton Name="RadioRu" Content="RU" IsChecked="True" Margin="0,0,4,0" VerticalAlignment="Center" FontSize="11"/>
+                    <RadioButton Name="RadioEn" Content="EN" VerticalAlignment="Center" FontSize="11"/>
+                </StackPanel>
+
+                <!-- Кнопка Скриншот -->
+                <Button Grid.Column="2" Name="CaptureButton" Content="📸 Скрин" Height="28" Padding="6,0" 
+                        Click="CaptureButton_Click" FontWeight="Bold" FontSize="11"/>
+
+                <!-- Выбор задачи ИИ -->
+                <ComboBox Grid.Column="4" Name="AiTaskComboBox" Height="28" VerticalContentAlignment="Center" FontSize="11"
+                          SelectionChanged="AiTaskComboBox_SelectionChanged">
+                    <ComboBoxItem Content="Перевести и объяснить" IsSelected="True"/>
+                    <ComboBoxItem Content="Сделать краткое резюме"/>
+                    <ComboBoxItem Content="Найти ошибки"/>
+                    <ComboBoxItem Content="Свой промпт"/>
+                </ComboBox>
+
+                <!-- Кнопка Запросить ИИ -->
+                <Button Grid.Column="6" Name="AskAiButton" Content="Запросить ИИ" Height="28" Padding="8,0" 
+                        Click="AskAiButton_Click" FontWeight="Bold" FontSize="11"/>
+
+                <!-- Настройки ⚙ -->
+                <Button Grid.Column="8" Name="SettingsButton" Content="⚙" Width="28" Height="28" 
+                        FontSize="14" ToolTip="Настройки API Ключа" Click="SettingsButton_Click"/>
+            </Grid>
+        </StackPanel>
+    </Grid>
+</Window>

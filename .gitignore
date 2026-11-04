@@ -1,0 +1,27 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# .NET build
+bin/
+obj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+
+# Local configuration and secrets
+appsettings.json
+appsettings.*.json
+!appsettings.example.json
+.env
+.env.*
+!.env.example
+secrets.json
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,25 @@
+1) Добавьте namespace в корневой элемент MainWindow:
+
+xmlns:markdown="clr-namespace:WpfMarkdown.Controls;assembly=WpfMarkdown.Controls"
+
+2) В область вывода ответа добавьте (либо замените прежний TextBox результата этим блоком):
+
+<Border Grid.Row="..." Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="4">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+        <markdown:MarkdownViewer x:Name="AnswerViewer" Theme="Light"/>
+    </ScrollViewer>
+</Border>
+
+3) Рядом с существующей областью статуса разместите индикатор загрузки.
+   Подставьте соответствующий Grid.Row/Column из своего XAML:
+
+<StackPanel x:Name="LoadingPanel" Orientation="Horizontal" Visibility="Collapsed" Margin="0,6,0,0">
+    <ProgressBar Width="90" Height="5" IsIndeterminate="True" VerticalAlignment="Center"/>
+    <TextBlock Text="Генерирую ответ…" Margin="9,0,0,0" VerticalAlignment="Center"/>
+</StackPanel>
+
+4) Добавьте кнопку истории рядом с настройками (учитывайте ширину окна 500 px):
+
+<Button Content="🕘" ToolTip="История запросов" Click="HistoryButton_Click"/>
+
+Для корневого Window не забудьте указать WpfMarkdown namespace только один раз.
