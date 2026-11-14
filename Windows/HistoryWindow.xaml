@@ -1,7 +1,6 @@
 <Window x:Class="SharpLensAI.HistoryWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:markdown="clr-namespace:WpfMarkdown.Controls;assembly=WpfMarkdown.Controls"
         Title="История запросов — SharpLens AI"
         Width="940" Height="620" MinWidth="760" MinHeight="480"
         WindowStartupLocation="CenterOwner"
@@ -12,9 +11,9 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+        <DockPanel Grid.Row="0" Margin="0,0,0,12" LastChildFill="False">
             <TextBlock Text="История запросов" FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            <Button DockPanel.Dock="Right" Content="Очистить историю" Padding="12,7" Click="ClearHistory_Click"/>
+            <Button DockPanel.Dock="Right" Content="Открыть запрос" Click="Open_Click"/><Button DockPanel.Dock="Right" Content="Скопировать ответ" Click="Copy_Click"/><Button DockPanel.Dock="Right" Content="Очистить историю" Padding="12,7" Click="ClearHistory_Click"/>
         </DockPanel>
 
         <Grid Grid.Row="1">
@@ -39,18 +38,18 @@
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="110"/>
+                    <RowDefinition Height="110"/><RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="Распознанный текст" FontWeight="SemiBold" Margin="0,0,0,5"/>
                 <TextBox x:Name="RecognizedTextBox" Grid.Row="1" IsReadOnly="True" TextWrapping="Wrap"
                          VerticalScrollBarVisibility="Auto" AcceptsReturn="True" BorderBrush="#FFE2E8F0" Background="White" Padding="8"/>
-                <TextBlock Grid.Row="2" Text="Ответ ИИ" FontWeight="SemiBold" Margin="0,12,0,5"/>
-                <Border Grid.Row="3" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="4">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <markdown:MarkdownViewer x:Name="HistoryAnswerViewer" Theme="Light"/>
-                    </ScrollViewer>
+                <TextBox x:Name="InstructionBox" Grid.Row="2" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="90" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0" ToolTip="Инструкция и модель"/><TextBlock Grid.Row="3" Text="Ответ ИИ" FontWeight="SemiBold" Margin="0,12,0,5"/>
+                <Border Grid.Row="4" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="4">
+
+                        <FlowDocumentScrollViewer x:Name="HistoryAnswerViewer" IsToolBarVisible="False"/>
+
                 </Border>
             </Grid>
         </Grid>

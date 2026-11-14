@@ -1,90 +1,61 @@
 using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Controls; // Обязательно для Canvas
+using System.Windows.Controls;
 using System.Windows.Input;
-
-namespace SharpLensAI
+using System.Windows.Interop;
+using System.Windows.Media.Imaging;
+using SharpLensAI.Services;
+namespace SharpLensAI;
+public partial class SnippingWindow : Window
 {
-    public partial class SnippingWindow : Window
+    private readonly Bitmap _screen;
+    private System.Windows.Point _start;
+    private bool _dragging;
+    public Bitmap? CapturedBitmap { get; private set; }
+    [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr handle, IntPtr after, int x, int y, int width, int height, uint flags);
+    public SnippingWindow(Bitmap screen)
     {
-        private System.Windows.Point _startPoint;
-        private bool _isDragging = false;
-        
-        // Помечаем как nullable (Bitmap?), чтобы убрать предупреждение CS8618
-        public Bitmap? CapturedBitmap { get; private set; }
-
-        private readonly Bitmap _screenBitmap;
-
-        public SnippingWindow(Bitmap screenBitmap)
-        {
-            InitializeComponent();
-            _screenBitmap = screenBitmap;
-        }
-
-        private void Window_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            _startPoint = e.GetPosition(this);
-            _isDragging = true;
-            SelectionBox.Visibility = Visibility.Visible;
-            Canvas.SetLeft(SelectionBox, _startPoint.X);
-            Canvas.SetTop(SelectionBox, _startPoint.Y);
-            SelectionBox.Width = 0;
-            SelectionBox.Height = 0;
-        }
-
-        private void Window_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (!_isDragging) return;
-
-            var currentPoint = e.GetPosition(this);
-
-            double x = System.Math.Min(currentPoint.X, _startPoint.X);
-            double y = System.Math.Min(currentPoint.Y, _startPoint.Y);
-            double width = System.Math.Abs(currentPoint.X - _startPoint.X);
-            double height = System.Math.Abs(currentPoint.Y - _startPoint.Y);
-
-            Canvas.SetLeft(SelectionBox, x);
-            Canvas.SetTop(SelectionBox, y);
-            SelectionBox.Width = width;
-            SelectionBox.Height = height;
-        }
-
-        private void Window_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            _isDragging = false;
-
-            double x = Canvas.GetLeft(SelectionBox);
-            double y = Canvas.GetTop(SelectionBox);
-            double width = SelectionBox.Width;
-            double height = SelectionBox.Height;
-
-            if (width > 10 && height > 10)
-            {
-                var source = PresentationSource.FromVisual(this);
-                double dpiX = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-                double dpiY = source?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
-
-                int rectX = (int)(x * dpiX);
-                int rectY = (int)(y * dpiY);
-                int rectWidth = (int)(width * dpiX);
-                int rectHeight = (int)(height * dpiY);
-
-                CapturedBitmap = new Bitmap(rectWidth, rectHeight);
-                using (var g = Graphics.FromImage(CapturedBitmap))
-                {
-                    // Явно используем System.Drawing.Rectangle во избежание конфликтов с WPF классами
-                    g.DrawImage(_screenBitmap, new System.Drawing.Rectangle(0, 0, rectWidth, rectHeight),
-                        new System.Drawing.Rectangle(rectX, rectY, rectWidth, rectHeight), GraphicsUnit.Pixel);
-                }
-
-                DialogResult = true;
-            }
-            else
-            {
-                DialogResult = false;
-            }
-
-            Close();
-        }
+        InitializeComponent(); _screen = screen;
+        using var stream = new MemoryStream(); screen.Save(stream, System.Drawing.Imaging.ImageFormat.Png); stream.Position = 0;
+        var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad; image.StreamSource = stream; image.EndInit(); image.Freeze(); DesktopImage.Source = image;
+        SourceInitialized += (_, _) => { var b = ScreenCapture.Bounds; SetWindowPos(new WindowInteropHelper(this).Handle, new IntPtr(-1), b.X, b.Y, b.Width, b.Height, 0x0040); };
+        Loaded += (_, _) => { Activate(); Focus(); };
+    }
+    private void Window_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Right) { DialogResult = false; return; }
+        if (e.ChangedButton != MouseButton.Left) return;
+        _start = e.GetPosition(SelectionCanvas); _dragging = true; SelectionCanvas.CaptureMouse();
+        SelectionBox.Visibility = Visibility.Visible; Canvas.SetLeft(SelectionBox, _start.X); Canvas.SetTop(SelectionBox, _start.Y); SelectionBox.Width = SelectionBox.Height = 0;
+    }
+    private void Window_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_dragging) return;
+        var p = e.GetPosition(SelectionCanvas);
+        p.X = Math.Clamp(p.X, 0, SelectionCanvas.ActualWidth); p.Y = Math.Clamp(p.Y, 0, SelectionCanvas.ActualHeight);
+        Canvas.SetLeft(SelectionBox, Math.Min(p.X, _start.X)); Canvas.SetTop(SelectionBox, Math.Min(p.Y, _start.Y));
+        SelectionBox.Width = Math.Abs(p.X - _start.X); SelectionBox.Height = Math.Abs(p.Y - _start.Y);
+    }
+    private void Window_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || !_dragging) return;
+        Window_MouseMove(sender, e); // Include the final pointer position even on a quick drag.
+        _dragging = false;
+        SelectionCanvas.ReleaseMouseCapture();
+        CompleteSelection();
+    }
+    private void Window_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape) DialogResult = false;
+    }
+    private void CompleteSelection()
+    {
+        if (SelectionBox.Width < 3 || SelectionBox.Height < 3) return;
+        double sx = _screen.Width / SelectionCanvas.ActualWidth, sy = _screen.Height / SelectionCanvas.ActualHeight;
+        int x = Math.Clamp((int)(Canvas.GetLeft(SelectionBox) * sx), 0, _screen.Width - 1), y = Math.Clamp((int)(Canvas.GetTop(SelectionBox) * sy), 0, _screen.Height - 1);
+        int w = Math.Clamp((int)(SelectionBox.Width * sx), 1, _screen.Width - x), h = Math.Clamp((int)(SelectionBox.Height * sy), 1, _screen.Height - y);
+        CapturedBitmap = _screen.Clone(new Rectangle(x, y, w, h), System.Drawing.Imaging.PixelFormat.Format32bppArgb); DialogResult = true;
     }
 }

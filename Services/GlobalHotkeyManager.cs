@@ -9,7 +9,10 @@ namespace SharpLensAI.Services;
 /// <summary>Регистрация глобальных комбинаций Windows, работающих и вне окна приложения.</summary>
 public sealed class GlobalHotkeyManager : IDisposable
 {
-    private const int HotkeyId = 0x534C; // "SL"
+    private static int _nextId = 0x5300;
+    private int _hotkeyId;
+    private ModifierKeys _modifiers;
+    private Key _key;
     private const int WmHotkey = 0x0312;
     private const uint ModAlt = 0x0001;
     private const uint ModControl = 0x0002;
@@ -31,7 +34,10 @@ public sealed class GlobalHotkeyManager : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(window);
 
-        Unregister();
+        if (!HotkeyGesture.IsValid(modifiers, key)) return false;
+        if (_registered && _window == window && _modifiers == modifiers && _key == key) return true;
+        if (_window != null && _window != window)
+            throw new InvalidOperationException("Менеджер горячей клавиши привязан к другому окну.");
         _window = window;
         _handle = new WindowInteropHelper(window).Handle;
         if (_handle == IntPtr.Zero)
@@ -54,20 +60,26 @@ public sealed class GlobalHotkeyManager : IDisposable
         if (modifiers.HasFlag(ModifierKeys.Windows)) nativeModifiers |= ModWin;
 
         var virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
-        _registered = RegisterHotKey(_handle, HotkeyId, nativeModifiers, virtualKey);
-        return _registered;
+        int nextId = Interlocked.Increment(ref _nextId);
+        if (!RegisterHotKey(_handle, nextId, nativeModifiers, virtualKey)) return false;
+        Unregister();
+        _hotkeyId = nextId;
+        _modifiers = modifiers;
+        _key = key;
+        _registered = true;
+        return true;
     }
 
     public void Unregister()
     {
         if (_registered && _handle != IntPtr.Zero)
-            UnregisterHotKey(_handle, HotkeyId);
+            UnregisterHotKey(_handle, _hotkeyId);
         _registered = false;
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WmHotkey && wParam.ToInt32() == HotkeyId)
+        if (_registered && msg == WmHotkey && wParam.ToInt32() == _hotkeyId)
         {
             handled = true;
             HotkeyPressed?.Invoke(this, EventArgs.Empty);

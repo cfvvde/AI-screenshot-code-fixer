@@ -1,0 +1,40 @@
+<Window x:Class="SharpLensAI.LocalModelsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Локальные модели" Width="590" SizeToContent="Height" MaxHeight="620"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner"
+        Background="#F3F6FB" FontFamily="Segoe UI" FontSize="14">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24">
+            <TextBlock Text="Локальные модели" FontSize="26" FontWeight="Bold" Margin="0,0,0,8"/>
+            <TextBlock Text="Скачайте модель для работы на устройстве. При первой установке также скачивается движок llama.cpp для Windows x64."
+                       TextWrapping="Wrap" Foreground="#607086"/>
+            <ItemsControl x:Name="ModelsList" Margin="0,12,0,4">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="12" Margin="0,0,0,8" Background="White" BorderBrush="#CDD8E8" BorderThickness="1" CornerRadius="6">
+                            <DockPanel LastChildFill="True">
+                                <Button DockPanel.Dock="Right" Content="{Binding Action}" Tag="{Binding Model}"
+                                        IsEnabled="{Binding CanInstall}" Click="Download_Click" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Model.Title}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Details}" TextWrapping="Wrap" Foreground="#607086" FontSize="12"/>
+                                    <TextBlock Text="{Binding Status}" FontSize="12" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ProgressBar x:Name="DownloadBar" Height="8" Visibility="Collapsed" Margin="0,0,0,8"/>
+            <TextBlock x:Name="DownloadStatus" TextWrapping="Wrap" Margin="0,0,0,10"/>
+            <TextBlock x:Name="FolderPath" TextWrapping="Wrap" Foreground="#607086" FontSize="12" Margin="0,0,0,8"/>
+            <DockPanel LastChildFill="False">
+                <Button Content="Открыть папку" Click="OpenFolder_Click"/>
+                <Button x:Name="CloseButton" DockPanel.Dock="Right" Content="Закрыть" IsCancel="True"/>
+                <Button x:Name="CancelDownloadButton" DockPanel.Dock="Right" Content="Отменить загрузку"
+                        Click="CancelDownload_Click" Visibility="Collapsed"/>
+            </DockPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

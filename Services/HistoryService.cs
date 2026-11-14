@@ -11,6 +11,8 @@ namespace SharpLensAI.Services;
 
 public sealed class HistoryService
 {
+    private readonly string? _path;
+    public HistoryService(string? path = null) => _path = path;
     private const int MaxEntries = 300;
     private static readonly SemaphoreSlim FileLock = new(1, 1);
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -76,9 +78,9 @@ public sealed class HistoryService
         }
     }
 
-    private static async Task<List<HistoryEntry>> ReadAllCoreAsync(CancellationToken cancellationToken)
+    private async Task<List<HistoryEntry>> ReadAllCoreAsync(CancellationToken cancellationToken)
     {
-        var path = HistoryPath;
+        var path = _path ?? HistoryPath;
         if (!File.Exists(path)) return new List<HistoryEntry>();
 
         try
@@ -94,9 +96,9 @@ public sealed class HistoryService
         }
     }
 
-    private static async Task WriteAllCoreAsync(List<HistoryEntry> entries, CancellationToken cancellationToken)
+    private async Task WriteAllCoreAsync(List<HistoryEntry> entries, CancellationToken cancellationToken)
     {
-        var path = HistoryPath;
+        var path = _path ?? HistoryPath;
         var tempPath = path + ".tmp";
         var json = JsonSerializer.Serialize(entries, JsonOptions);
         await File.WriteAllTextAsync(tempPath, json, cancellationToken).ConfigureAwait(false);

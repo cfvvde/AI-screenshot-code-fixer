@@ -1,47 +1,52 @@
-<Window x:Class="SharpLensAI.SettingsWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Настройки SharpLens AI"
-        Width="470" SizeToContent="Height"
-        WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
-        Background="#FFF7F8FA"
-        FontFamily="Segoe UI">
-    <Grid Margin="22">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-        <TextBlock Grid.Row="0" Text="Настройки" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,16"/>
-
-        <StackPanel Grid.Row="1" Margin="0,0,0,14">
-            <TextBlock Text="Google Gemini API key" FontWeight="SemiBold" Margin="0,0,0,6"/>
-            <PasswordBox x:Name="ApiKeyPasswordBox" Height="34" Padding="8,6"/>
-            <TextBlock Text="Ключ хранится в appsettings.json в профиле пользователя. Пустое поле использует настроенный встроенный ключ, если он задан разработчиком."
-                       TextWrapping="Wrap" Foreground="#FF64748B" FontSize="11" Margin="0,6,0,0"/>
-        </StackPanel>
-
-        <CheckBox x:Name="AutoCopyCheckBox" Grid.Row="2"
-                  Content="Автоматически копировать готовый ответ в буфер обмена"
-                  Margin="0,0,0,12"/>
-
-        <StackPanel Grid.Row="3" Margin="0,0,0,16">
-            <CheckBox x:Name="EnableHotkeyCheckBox"
-                      Content="Глобальная горячая клавиша Ctrl + Shift + X"/>
-            <TextBlock Text="Работает, даже когда SharpLens AI находится в фоне. Если сочетание занято другой программой, его регистрация не удастся."
-                       TextWrapping="Wrap" Foreground="#FF64748B" FontSize="11" Margin="22,5,0,0"/>
-        </StackPanel>
-
-        <TextBlock x:Name="StatusText" Grid.Row="4" Foreground="#FFB45309" TextWrapping="Wrap" Margin="0,0,0,12"/>
-
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Отмена" MinWidth="92" Padding="12,7" Margin="0,0,8,0" IsCancel="True"/>
-            <Button Content="Сохранить" MinWidth="104" Padding="12,7" IsDefault="True" Click="SaveButton_Click"/>
-        </StackPanel>
-    </Grid>
+<Window x:Class="SharpLensAI.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Настройки SharpLens AI" Width="570" Height="760" MinHeight="500" WindowStartupLocation="CenterOwner" Background="#F3F6FB" FontFamily="Segoe UI" FontSize="14">
+ <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="24">
+  <TextBlock Text="Настройки" FontSize="26" FontWeight="Bold" Margin="0,0,0,16"/>
+  <TextBlock Text="ИИ-провайдер"/>
+  <ComboBox x:Name="ProviderBox" Margin="0,5,0,8" SelectionChanged="ProviderChanged" DropDownOpened="ProvidersOpened">
+   <ComboBoxItem Content="Яндекс · YandexGPT" Tag="Yandex"/><ComboBoxItem Content="OpenAI · ChatGPT" Tag="OpenAI"/><ComboBoxItem Content="Сбер · GigaChat" Tag="GigaChat"/><ComboBoxItem Content="Совместимый API / локальная модель" Tag="Compatible"/><ComboBoxItem Content="Google · Gemini" Tag="Gemini"/><ComboBoxItem Content="OpenRouter" Tag="OpenRouter"/>
+   <ComboBoxItem x:Name="InstallLocalItem" Content="Установить локальный ИИ…"/>
+  </ComboBox>
+  <Button Content="Установить локальный ИИ…" Click="InstallLocal_Click" HorizontalAlignment="Left" Margin="0,0,0,12"/>
+  <StackPanel x:Name="KeyPanel">
+   <TextBlock x:Name="KeyLabel" Text="API-ключ"/><PasswordBox x:Name="ApiKeyPasswordBox" Padding="8" Margin="0,5,0,6"/>
+  </StackPanel>
+  <StackPanel x:Name="YandexPanel" Visibility="Collapsed">
+   <CheckBox x:Name="IamBox" Content="Использовать IAM-токен Яндекса" Margin="0,0,0,12"/>
+   <TextBlock Text="ID каталога Яндекс (Folder ID)"/><TextBox x:Name="FolderBox" Margin="0,5,0,12"/>
+  </StackPanel>
+  <StackPanel x:Name="GigaChatPanel" Visibility="Collapsed" Margin="0,0,0,12">
+   <TextBlock Text="Тип доступа GigaChat (scope)"/>
+   <ComboBox x:Name="ScopeBox" SelectedIndex="0" Margin="0,5,0,0"><ComboBoxItem Content="Физическое лицо · GIGACHAT_API_PERS" Tag="GIGACHAT_API_PERS"/><ComboBoxItem Content="Бизнес: пакеты · GIGACHAT_API_B2B" Tag="GIGACHAT_API_B2B"/><ComboBoxItem Content="Бизнес: pay-as-you-go · GIGACHAT_API_CORP" Tag="GIGACHAT_API_CORP"/></ComboBox>
+  </StackPanel>
+  <StackPanel x:Name="ModelPanel">
+   <TextBlock Text="Модель"/><TextBox x:Name="ModelBox" Margin="0,5,0,12"/>
+  </StackPanel>
+  <StackPanel x:Name="EndpointPanel" Visibility="Collapsed">
+   <TextBlock Text="Полный URL API (включая /v1/chat/completions)" TextWrapping="Wrap"/><TextBox x:Name="EndpointBox" Margin="0,5,0,12"/>
+  </StackPanel>
+  <TextBlock x:Name="ProviderHint" TextWrapping="Wrap" Foreground="#607086" FontSize="12"/>
+  <StackPanel x:Name="OpenAiAccountPanel" Visibility="Collapsed" Margin="0,6,0,8">
+   <TextBlock Text="При ошибке квоты проверьте баланс и лимиты API в OpenAI Platform. Настройки приложения не увеличивают квоту аккаунта." TextWrapping="Wrap" Foreground="#607086" FontSize="12"/>
+   <WrapPanel Margin="0,6,0,0"><Button Content="Баланс API" Tag="https://platform.openai.com/settings/organization/billing/overview" Click="OpenAiAccount_Click"/><Button Content="Лимиты API" Tag="https://platform.openai.com/settings/organization/limits" Click="OpenAiAccount_Click"/></WrapPanel>
+  </StackPanel>
+  <TextBlock x:Name="KeyStorageHint" Text="Ключ хранится в зашифрованном виде средствами Windows." Foreground="#607086" FontSize="12" Margin="0,5,0,0"/>
+  <Button x:Name="ProviderHelpButton" Content="Инструкция подключения" Click="Help_Click" HorizontalAlignment="Left" Margin="0,8,0,12"/>
+  <WrapPanel><TextBlock Text="Тайм-аут, сек." VerticalAlignment="Center"/><TextBox x:Name="TimeoutBox" Width="65" Margin="8,0,16,0"/><TextBlock Text="Макс. токенов" VerticalAlignment="Center"/><TextBox x:Name="TokensBox" Width="80" Margin="8,0,0,0"/></WrapPanel>
+  <CheckBox x:Name="AutoCopyCheckBox" Content="Автоматически копировать ответ" Margin="0,16,0,8"/>
+  <CheckBox x:Name="HistoryBox" Content="Сохранять историю локально (текст и ответы)" Margin="0,0,0,12"/>
+  <CheckBox x:Name="EnableHotkeyCheckBox" Content="Включить глобальную горячую клавишу"/>
+  <Grid Margin="0,8,0,4">
+   <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <TextBox x:Name="HotkeyBox" IsReadOnly="True" PreviewKeyDown="HotkeyBox_KeyDown" GotKeyboardFocus="HotkeyBox_GotKeyboardFocus" LostKeyboardFocus="HotkeyBox_LostKeyboardFocus" VerticalContentAlignment="Center" Cursor="Hand" ToolTip="Нажмите здесь, затем нажмите новое сочетание">
+    <TextBox.Style><Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+     <Setter Property="BorderThickness" Value="2"/><Setter Property="Background" Value="White"/>
+     <Style.Triggers><Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="#245CDD"/><Setter Property="Background" Value="#E8F0FF"/></Trigger></Style.Triggers>
+    </Style></TextBox.Style>
+   </TextBox>
+   <Button Grid.Column="1" Content="По умолчанию" Click="ResetHotkey_Click" Margin="8,0,0,0" ToolTip="Вернуть Ctrl + Shift + X"/>
+  </Grid>
+  <TextBlock x:Name="HotkeyHint" Text="Нажмите на поле, чтобы задать сочетание. Изменения применятся после сохранения." TextWrapping="Wrap" Foreground="#245CDD" FontSize="12"/>
+  <TextBlock x:Name="StatusText" Foreground="#B45309" TextWrapping="Wrap" Margin="0,12"/>
+  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="Отмена" IsCancel="True"/><Button Content="Сохранить" Click="SaveButton_Click"/></StackPanel>
+ </StackPanel></ScrollViewer>
 </Window>

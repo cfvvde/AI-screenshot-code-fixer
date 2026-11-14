@@ -6,6 +6,9 @@ public sealed class HistoryEntry
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public int Mode { get; set; } = 4;
+    public string Provider { get; set; } = "";
+    public string Model { get; set; } = "";
     public string Prompt { get; set; } = string.Empty;
     public string RecognizedText { get; set; } = string.Empty;
     public string Answer { get; set; } = string.Empty;

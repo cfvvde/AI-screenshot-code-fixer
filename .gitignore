@@ -25,3 +25,8 @@ secrets.json
 # Windows
 Thumbs.db
 Desktop.ini
+# User data and local build artifacts
+history*.json
+*.bak
+TestResults/
+artifacts/

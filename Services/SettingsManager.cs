@@ -1,106 +1,95 @@
-using System;
 using System.IO;
-using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Windows.Input;
+using System.Runtime.InteropServices;
+using System.ComponentModel;
 
 namespace SharpLensAI.Services;
 
 public sealed class AppSettings
 {
-    public string CustomApiKey { get; set; } = string.Empty;
-    public bool AutoCopyAnswer { get; set; } = true;
+    [JsonIgnore] public string CustomApiKey { get; set; } = "";
+    public string ProtectedApiKey { get; set; } = "";
+    public string Provider { get; set; } = "Yandex";
+    public string FolderId { get; set; } = "";
+    public string Model { get; set; } = "yandexgpt/latest";
+    public string Endpoint { get; set; } = "http://localhost:11434/v1/chat/completions";
+    public string GigaChatScope { get; set; } = "GIGACHAT_API_PERS";
+    public bool UseIamToken { get; set; }
+    public bool AutoCopyAnswer { get; set; }
+    public bool SaveHistory { get; set; } = true;
     public bool EnableGlobalHotkey { get; set; } = true;
+    public ModifierKeys HotkeyModifiers { get; set; } = HotkeyGesture.DefaultModifiers;
+    public Key HotkeyKey { get; set; } = HotkeyGesture.DefaultKey;
+    public int TimeoutSeconds { get; set; } = 90;
+    public int MaxTokens { get; set; } = 2000;
 }
 
 public static class SettingsManager
 {
-    private const string SettingsFileName = "appsettings.json";
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-
-    // Не встраивайте настоящий секрет в публичный репозиторий/дистрибутив.
-    // При необходимости замените placeholder для локальной сборки; пользовательский ключ имеет приоритет.
-    public const string DEFAULT_KEY = "СЮДА_ВСТАВЬТЕ_ВАШ_КЛЮЧ";
-
-    public static string SettingsPath
-    {
-        get
-        {
-            var directory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SharpLensAI");
-            Directory.CreateDirectory(directory);
-            return Path.Combine(directory, SettingsFileName);
-        }
-    }
-
+    public static string? LoadWarning { get; private set; }
+    public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SharpLensAI", "appsettings.json");
     public static AppSettings Load()
     {
+        LoadWarning = null;
         try
         {
-            if (File.Exists(SettingsPath))
-                return ReadSettings(SettingsPath);
-
-            // Одноразовая миграция старого appsettings.json, лежавшего рядом с приложением.
-            var legacyPaths = new[]
+            if (!File.Exists(SettingsPath)) return new();
+            var json = File.ReadAllText(SettingsPath);
+            var settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new();
+            if (!string.IsNullOrEmpty(settings.ProtectedApiKey))
+                settings.CustomApiKey = SecretProtection.Unprotect(settings.ProtectedApiKey);
+            else
             {
-                Path.Combine(AppContext.BaseDirectory, SettingsFileName),
-                Path.Combine(Environment.CurrentDirectory, SettingsFileName)
-            }.Distinct(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var legacyPath in legacyPaths)
-            {
-                if (!File.Exists(legacyPath) ||
-                    string.Equals(Path.GetFullPath(legacyPath), Path.GetFullPath(SettingsPath), StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var settings = ReadSettings(legacyPath);
-                try { Save(settings); } catch { /* чтение старого файла всё ещё полезно */ }
-                return settings;
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("CustomApiKey", out var oldKey))
+                {
+                    settings.CustomApiKey = oldKey.GetString() ?? "";
+                    settings.Provider = "Compatible";
+                    settings.AutoCopyAnswer = false;
+                    Save(settings);
+                    LoadWarning = "Старый ключ зашифрован. Выберите провайдера и модель в настройках.";
+                }
             }
+            return settings;
         }
-        catch
-        {
-            // Повреждённый/недоступный файл настроек не должен останавливать запуск приложения.
-        }
-
-        return new AppSettings();
+        catch { LoadWarning = "Не удалось прочитать настройки или расшифровать ключ. Откройте настройки и введите данные заново."; return new(); }
     }
-
     public static void Save(AppSettings settings)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        var path = SettingsPath;
-        var temporaryPath = path + ".tmp";
-        var json = JsonSerializer.Serialize(settings, JsonOptions);
-        File.WriteAllText(temporaryPath, json);
-
-        if (File.Exists(path))
-            File.Move(temporaryPath, path, overwrite: true);
-        else
-            File.Move(temporaryPath, path);
+        settings.ProtectedApiKey = string.IsNullOrWhiteSpace(settings.CustomApiKey) ? "" : SecretProtection.Protect(settings.CustomApiKey);
+        Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
+        File.WriteAllText(SettingsPath + ".tmp", JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }));
+        File.Move(SettingsPath + ".tmp", SettingsPath, true);
     }
+}
 
-    public static string GetEffectiveApiKey()
+public static class SecretProtection
+{
+    [StructLayout(LayoutKind.Sequential)] private struct Blob { public int Size; public IntPtr Data; }
+    [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool CryptProtectData(ref Blob input, string? description, IntPtr entropy, IntPtr reserved, IntPtr prompt, uint flags, out Blob output);
+    [DllImport("crypt32.dll", SetLastError = true)]
+    private static extern bool CryptUnprotectData(ref Blob input, IntPtr description, IntPtr entropy, IntPtr reserved, IntPtr prompt, uint flags, out Blob output);
+    [DllImport("kernel32.dll")] private static extern IntPtr LocalFree(IntPtr memory);
+    public static string Protect(string value) => Convert.ToBase64String(Transform(Encoding.UTF8.GetBytes(value), true));
+    public static string Unprotect(string value) => Encoding.UTF8.GetString(Transform(Convert.FromBase64String(value), false));
+    private static byte[] Transform(byte[] bytes, bool protect)
     {
-        var customKey = Load().CustomApiKey?.Trim();
-        if (!string.IsNullOrWhiteSpace(customKey))
-            return customKey;
-
-        return IsUsableKey(DEFAULT_KEY) ? DEFAULT_KEY.Trim() : string.Empty;
+        var input = new Blob { Size = bytes.Length, Data = Marshal.AllocHGlobal(bytes.Length) };
+        Blob output = default;
+        try
+        {
+            Marshal.Copy(bytes, 0, input.Data, bytes.Length);
+            bool ok = protect ? CryptProtectData(ref input, null, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 1, out output)
+                : CryptUnprotectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 1, out output);
+            if (!ok) throw new Win32Exception(Marshal.GetLastWin32Error());
+            var result = new byte[output.Size];
+            Marshal.Copy(output.Data, result, 0, result.Length);
+            return result;
+        }
+        finally { Marshal.FreeHGlobal(input.Data); if (output.Data != IntPtr.Zero) LocalFree(output.Data); Array.Clear(bytes); }
     }
-
-    // Сохранено для совместимости с прежним кодом проекта.
-    public static string GetApiKey() => GetEffectiveApiKey();
-
-    private static AppSettings ReadSettings(string path)
-    {
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<AppSettings>(json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new AppSettings();
-    }
-
-    private static bool IsUsableKey(string? value) =>
-        !string.IsNullOrWhiteSpace(value) &&
-        !value.StartsWith("СЮДА_", StringComparison.OrdinalIgnoreCase) &&
-        !value.Contains("ВАШ_КЛЮЧ", StringComparison.OrdinalIgnoreCase);
 }

@@ -10,6 +10,9 @@ namespace SharpLensAI;
 
 public partial class HistoryWindow : Window
 {
+    public HistoryEntry? SelectedEntry { get; private set; }
+    private void Open_Click(object sender, RoutedEventArgs e) { if (HistoryList.SelectedItem is HistoryEntry entry) { SelectedEntry = entry; DialogResult = true; } }
+    private async void Copy_Click(object sender, RoutedEventArgs e) { if (HistoryList.SelectedItem is HistoryEntry entry && !await ClipboardHelper.SetTextWithRetryAsync(entry.Answer)) MessageBox.Show(this, "Буфер обмена занят."); }
     private readonly HistoryService _historyService = new();
     private readonly ObservableCollection<HistoryEntry> _entries = new();
 
@@ -33,8 +36,8 @@ public partial class HistoryWindow : Window
 
             if (_entries.Count == 0)
             {
-                RecognizedTextBox.Clear();
-                HistoryAnswerViewer.Markdown = "История пока пуста.";
+                RecognizedTextBox.Clear(); InstructionBox.Clear();
+                HistoryAnswerViewer.Document = MarkdownRenderer.Render("История пока пуста.");
                 return;
             }
 
@@ -60,7 +63,8 @@ public partial class HistoryWindow : Window
     {
         if (HistoryList.SelectedItem is not HistoryEntry entry) return;
         RecognizedTextBox.Text = entry.RecognizedText;
-        HistoryAnswerViewer.Markdown = string.IsNullOrWhiteSpace(entry.Answer) ? "(Пустой ответ)" : entry.Answer;
+        InstructionBox.Text = $"{entry.Provider} · {entry.Model}\n{entry.Prompt}";
+        HistoryAnswerViewer.Document = MarkdownRenderer.Render(entry.Answer);
     }
 
     private async void ClearHistory_Click(object sender, RoutedEventArgs e)
@@ -73,8 +77,8 @@ public partial class HistoryWindow : Window
         {
             await _historyService.ClearAsync();
             _entries.Clear();
-            RecognizedTextBox.Clear();
-            HistoryAnswerViewer.Markdown = "История пока пуста.";
+            RecognizedTextBox.Clear(); InstructionBox.Clear();
+            HistoryAnswerViewer.Document = MarkdownRenderer.Render("История пока пуста.");
         }
         catch (Exception ex)
         {
